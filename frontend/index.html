@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ระบบตรวจจับท่าทางเสี่ยงต่อการหกล้มของผู้สูงอายุด้วย Edge AI - Fall Risk Detection Dashboard">
+    <title>ระบบตรวจจับท่าทางเสี่ยงต่อการหกล้ม | Edge AI</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- ===== HEADER ===== -->
+    <header class="header" id="header">
+        <div class="header-left">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>Fall Risk Detection</h1>
+                    <span class="logo-subtitle">Edge AI Monitoring System</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="status-badge" id="connectionStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">กำลังเชื่อมต่อ...</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="header-clock" id="headerClock">--:--:--</div>
+            <div class="header-date" id="headerDate">-- --- ----</div>
+        </div>
+    </header>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="dashboard">
+        <!-- Row 1: Video Feed + Risk Meter + Body Metrics -->
+        <div class="dashboard-row row-top">
+            <!-- Video Feed -->
+            <div class="card card-video" id="videoCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        Live Feed
+                    </h2>
+                    <div class="fps-badge" id="fpsBadge">-- FPS</div>
+                </div>
+                <div class="video-container">
+                    <img id="videoFeed" src="/video_feed" alt="Live Camera Feed" />
+                    <div class="video-overlay" id="videoOverlay">
+                        <div class="person-status" id="personStatus">
+                            <span class="person-icon">👤</span>
+                            <span id="personText">กำลังตรวจจับ...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Meter -->
+            <div class="card card-risk" id="riskCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        ระดับความเสี่ยง
+                    </h2>
+                </div>
+                <div class="risk-meter-container">
+                    <div class="risk-circle" id="riskCircle">
+                        <svg viewBox="0 0 200 200" class="risk-svg">
+                            <circle cx="100" cy="100" r="85" class="risk-bg-ring"/>
+                            <circle cx="100" cy="100" r="85" class="risk-progress-ring" id="riskRing" 
+                                    stroke-dasharray="534" stroke-dashoffset="534"/>
+                        </svg>
+                        <div class="risk-label" id="riskLabel">
+                            <span class="risk-level-text" id="riskLevelText">SAFE</span>
+                            <span class="risk-level-thai" id="riskLevelThai">ปลอดภัย</span>
+                        </div>
+                    </div>
+                    <div class="risk-factors" id="riskFactors">
+                        <div class="factor-empty">ไม่พบปัจจัยเสี่ยง</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Metrics -->
+            <div class="card card-metrics" id="metricsCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        Body Metrics
+                    </h2>
+                </div>
+                <div class="metrics-grid">
+                    <div class="metric-item" id="metricAngle">
+                        <div class="metric-icon">📐</div>
+                        <div class="metric-info">
+                            <div class="metric-label">มุมลำตัว</div>
+                            <div class="metric-value" id="bodyAngleValue">--°</div>
+                        </div>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" id="bodyAngleBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-item" id="metricVelocity">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-info">
+                            <div class="metric-label">ความเร็วตกลง</div>
+                            <div class="metric-value" id="velocityValue">--</div>
+                        </div>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" id="velocityBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-item" id="metricKneeL">
+                        <div class="metric-icon">🦵</div>
+                        <div class="metric-info">
+                            <div class="metric-label">มุมเข่าซ้าย</div>
+                            <div class="metric-value" id="kneeLeftValue">--°</div>
+                        </div>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" id="kneeLeftBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-item" id="metricKneeR">
+                        <div class="metric-icon">🦵</div>
+                        <div class="metric-info">
+                            <div class="metric-label">มุมเข่าขวา</div>
+                            <div class="metric-value" id="kneeRightValue">--°</div>
+                        </div>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" id="kneeRightBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-item" id="metricSway">
+                        <div class="metric-icon">🔄</div>
+                        <div class="metric-info">
+                            <div class="metric-label">การแกว่งตัว</div>
+                            <div class="metric-value" id="swayValue">--</div>
+                        </div>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" id="swayBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-item" id="metricStance">
+                        <div class="metric-icon">👣</div>
+                        <div class="metric-info">
+                            <div class="metric-label">ฐานยืน</div>
+                            <div class="metric-value" id="stanceValue">--</div>
+                        </div>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" id="stanceBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Charts + Alert History -->
+        <div class="dashboard-row row-bottom">
+            <!-- Statistics Charts -->
+            <div class="card card-charts" id="chartsCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="14"/>
+                        </svg>
+                        สถิติการตรวจจับ
+                    </h2>
+                    <div class="chart-tabs">
+                        <button class="chart-tab active" data-chart="hourly" id="tabHourly">รายชั่วโมง</button>
+                        <button class="chart-tab" data-chart="risk" id="tabRisk">สัดส่วนเสี่ยง</button>
+                        <button class="chart-tab" data-chart="weekly" id="tabWeekly">รายสัปดาห์</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="mainChart"></canvas>
+                </div>
+                <!-- Stats Summary -->
+                <div class="stats-summary">
+                    <div class="stat-item">
+                        <div class="stat-number" id="statTotal">0</div>
+                        <div class="stat-label">เหตุการณ์ทั้งหมด</div>
+                    </div>
+                    <div class="stat-item stat-critical">
+                        <div class="stat-number" id="statCritical">0</div>
+                        <div class="stat-label">เหตุการณ์วิกฤต</div>
+                    </div>
+                    <div class="stat-item stat-warning-count">
+                        <div class="stat-number" id="statWarnings">0</div>
+                        <div class="stat-label">เตือนวันนี้</div>
+                    </div>
+                    <div class="stat-item stat-safe-count">
+                        <div class="stat-number" id="statUptime">--</div>
+                        <div class="stat-label">เวลาทำงาน</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert History -->
+            <div class="card card-alerts" id="alertsCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        ประวัติการแจ้งเตือน
+                    </h2>
+                    <button class="btn-clear" id="btnClearAlerts" title="ล้างประวัติ">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="alert-list" id="alertList">
+                    <div class="alert-empty">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <p>ยังไม่มีการแจ้งเตือน</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Settings -->
+        <div class="dashboard-row row-settings">
+            <div class="card card-settings" id="settingsCard">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        ตั้งค่า Threshold
+                    </h2>
+                    <button class="btn-save" id="btnSaveSettings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        บันทึก
+                    </button>
+                </div>
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <h3>มุมลำตัว (องศา)</h3>
+                        <div class="setting-row">
+                            <label for="threshAngleWarn">⚠️ เตือน ≥</label>
+                            <input type="number" id="threshAngleWarn" value="30" min="10" max="60">
+                        </div>
+                        <div class="setting-row">
+                            <label for="threshAngleDanger">🚨 อันตราย ≥</label>
+                            <input type="number" id="threshAngleDanger" value="45" min="20" max="70">
+                        </div>
+                        <div class="setting-row">
+                            <label for="threshAngleFall">🆘 หกล้ม ≥</label>
+                            <input type="number" id="threshAngleFall" value="60" min="30" max="90">
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>ความเร็วตกลง</h3>
+                        <div class="setting-row">
+                            <label for="threshVelWarn">⚠️ เตือน ≥</label>
+                            <input type="number" id="threshVelWarn" value="0.02" min="0.005" max="0.1" step="0.005">
+                        </div>
+                        <div class="setting-row">
+                            <label for="threshVelDanger">🚨 อันตราย ≥</label>
+                            <input type="number" id="threshVelDanger" value="0.04" min="0.01" max="0.2" step="0.005">
+                        </div>
+                        <div class="setting-row">
+                            <label for="threshVelFall">🆘 หกล้ม ≥</label>
+                            <input type="number" id="threshVelFall" value="0.08" min="0.02" max="0.5" step="0.01">
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>มุมเข่า (องศา)</h3>
+                        <div class="setting-row">
+                            <label for="threshKneeWarn">⚠️ เตือน &lt;</label>
+                            <input type="number" id="threshKneeWarn" value="120" min="90" max="160">
+                        </div>
+                        <div class="setting-row">
+                            <label for="threshKneeDanger">🚨 อันตราย &lt;</label>
+                            <input type="number" id="threshKneeDanger" value="90" min="60" max="130">
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>อื่นๆ</h3>
+                        <div class="setting-row">
+                            <label for="threshStance">👣 ฐานยืนแคบ &lt;</label>
+                            <input type="number" id="threshStance" value="0.05" min="0.01" max="0.2" step="0.01">
+                        </div>
+                        <div class="setting-row">
+                            <label for="threshSwayWarn">🔄 แกว่ง ≥</label>
+                            <input type="number" id="threshSwayWarn" value="0.015" min="0.005" max="0.1" step="0.005">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ===== ALERT POPUP OVERLAY ===== -->
+    <div class="alert-overlay" id="alertOverlay" style="display: none;">
+        <div class="alert-popup" id="alertPopup">
+            <div class="alert-popup-icon" id="alertPopupIcon">🆘</div>
+            <div class="alert-popup-title" id="alertPopupTitle">ตรวจพบการหกล้ม!</div>
+            <div class="alert-popup-message" id="alertPopupMessage">ต้องการความช่วยเหลือทันที</div>
+            <div class="alert-popup-details" id="alertPopupDetails"></div>
+            <div class="alert-popup-time" id="alertPopupTime">--:--:--</div>
+            <button class="alert-popup-btn" id="alertPopupBtn">รับทราบ</button>
+        </div>
+    </div>
+
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/alerts.js"></script>
+    <script src="/static/js/charts.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
